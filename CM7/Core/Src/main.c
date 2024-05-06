@@ -141,8 +141,7 @@ int main(void)
 		HAL_Delay(500);
 
 		/* Send message over USART3 */
-		char *message = "Hello, USART3!\r\n";
-		HAL_UART_Transmit(&huart3, (uint8_t*) message, strlen(message), 100);
+		printf("Hello USART3! 2\r\n");
 	}
 	/* USER CODE END 3 */
 }
