@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "string.h"
+#include "mongoose.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -153,6 +154,16 @@ int main(void)
   MX_ETH_Init();
   MX_RNG_Init();
   /* USER CODE BEGIN 2 */
+  struct mg_mgr mgr;
+  mg_mgr_init(&mgr);
+
+  struct mg_tcpip_if mif = {
+      .mac = {00, 80, E1, 00, 00, 00},
+      .driver = &mg_tcpip_driver_stm32h,
+  };
+  mg_tcpip_init(&mgr, &mif);
+
+  for (;;) mg_mgr_poll(&mgr, 100);
 
   /* USER CODE END 2 */
 
@@ -423,7 +434,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 /**
   * @brief  This function is executed in case of error occurrence.
-  * @retval None
+ * @retval None
   */
 void Error_Handler(void)
 {
