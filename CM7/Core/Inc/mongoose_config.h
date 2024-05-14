@@ -1,7 +1,0 @@
-#pragma once
-
-#define MG_ARCH MG_ARCH_NEWLIB
-#define MG_ENABLE_TCPIP 1
-#define MG_ENABLE_CUSTOM_MILLIS 1
-
-#define MG_ENABLE_DRIVER_STM32H 1
