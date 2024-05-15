@@ -56,7 +56,6 @@
 void SystemClock_Config(void);
 static void MPU_Config(void);
 static void MX_GPIO_Init(void);
-
 /* USER CODE BEGIN PFP */
 static void tcp_echo_init(void);
 static err_t echo_accept(void *arg, struct tcp_pcb *newpcb, err_t err);
@@ -370,7 +369,6 @@ static err_t echo_poll(void *arg, struct tcp_pcb *tpcb)
 {
     return ERR_OK;
 }
-
 /**
   * @brief  This function is executed in case of error occurrence.
   * @retval None
