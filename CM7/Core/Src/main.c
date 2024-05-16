@@ -360,10 +360,11 @@ void tcp_server(void) {
   * @retval None
   */
 /* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument) {
-	/* init code for LWIP */
-	MX_LWIP_Init();
-	/* USER CODE BEGIN 5 */
+void StartDefaultTask(void *argument)
+{
+  /* init code for LWIP */
+  MX_LWIP_Init();
+  /* USER CODE BEGIN 5 */
 
 	tcp_server();
 
@@ -371,7 +372,7 @@ void StartDefaultTask(void *argument) {
 	for (;;) {
 		osDelay(1);
 	}
-	/* USER CODE END 5 */
+  /* USER CODE END 5 */
 }
 
  /* MPU Configuration */
