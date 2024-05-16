@@ -19,7 +19,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "cmsis_os.h"
 #include "lwip.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -49,13 +48,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .stack_size = 1024 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -64,8 +56,6 @@ const osThreadAttr_t defaultTask_attributes = {
 void SystemClock_Config(void);
 static void MPU_Config(void);
 static void MX_GPIO_Init(void);
-void StartDefaultTask(void *argument);
-
 /* USER CODE BEGIN PFP */
 //static void tcp_echo_init(void);
 //static err_t echo_accept(void *arg, struct tcp_pcb *newpcb, err_t err);
@@ -89,51 +79,50 @@ extern struct netif gnetif;
   * @brief  The application entry point.
   * @retval int
   */
-int main(void)
-{
+int main(void) {
 
-  /* USER CODE BEGIN 1 */
+	/* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
-/* USER CODE BEGIN Boot_Mode_Sequence_0 */
+	/* USER CODE END 1 */
+	/* USER CODE BEGIN Boot_Mode_Sequence_0 */
 //  int32_t timeout;
-/* USER CODE END Boot_Mode_Sequence_0 */
+	/* USER CODE END Boot_Mode_Sequence_0 */
 
-  /* MPU Configuration--------------------------------------------------------*/
-  MPU_Config();
+	/* MPU Configuration--------------------------------------------------------*/
+	MPU_Config();
 
-  /* Enable the CPU Cache */
+	/* Enable the CPU Cache */
 
-  /* Enable I-Cache---------------------------------------------------------*/
-  SCB_EnableICache();
+	/* Enable I-Cache---------------------------------------------------------*/
+	SCB_EnableICache();
 
-  /* Enable D-Cache---------------------------------------------------------*/
-  SCB_EnableDCache();
+	/* Enable D-Cache---------------------------------------------------------*/
+	SCB_EnableDCache();
 
-/* USER CODE BEGIN Boot_Mode_Sequence_1 */
-  /* Wait until CPU2 boots and enters in stop mode or timeout*/
+	/* USER CODE BEGIN Boot_Mode_Sequence_1 */
+	/* Wait until CPU2 boots and enters in stop mode or timeout*/
 //  timeout = 0xFFFF;
 //  while((__HAL_RCC_GET_FLAG(RCC_FLAG_D2CKRDY) != RESET) && (timeout-- > 0));
 //  if ( timeout < 0 )
 //  {
 //  Error_Handler();
 //  }
-/* USER CODE END Boot_Mode_Sequence_1 */
-  /* MCU Configuration--------------------------------------------------------*/
+	/* USER CODE END Boot_Mode_Sequence_1 */
+	/* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* USER CODE BEGIN Init */
+	/* USER CODE BEGIN Init */
 
-  /* USER CODE END Init */
+	/* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
-/* USER CODE BEGIN Boot_Mode_Sequence_2 */
-/* When system initialization is finished, Cortex-M7 will release Cortex-M4 by means of
-HSEM notification */
-/*HW semaphore Clock enable*/
+	/* Configure the system clock */
+	SystemClock_Config();
+	/* USER CODE BEGIN Boot_Mode_Sequence_2 */
+	/* When system initialization is finished, Cortex-M7 will release Cortex-M4 by means of
+	 HSEM notification */
+	/*HW semaphore Clock enable*/
 //__HAL_RCC_HSEM_CLK_ENABLE();
 ///*Take HSEM */
 //HAL_HSEM_FastTake(HSEM_ID_0);
@@ -146,71 +135,31 @@ HSEM notification */
 //{
 //Error_Handler();
 //}
-/* USER CODE END Boot_Mode_Sequence_2 */
+	/* USER CODE END Boot_Mode_Sequence_2 */
 
-  /* USER CODE BEGIN SysInit */
+	/* USER CODE BEGIN SysInit */
 
-  /* USER CODE END SysInit */
+	/* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  /* USER CODE BEGIN 2 */
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_LWIP_Init();
+	/* USER CODE BEGIN 2 */
 
-  /* USER CODE END 2 */
+	/* USER CODE END 2 */
 
-  /* Init scheduler */
-  osKernelInitialize();
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
+	while (1) {
+		/* USER CODE END WHILE */
 
-  /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
-  /* USER CODE END RTOS_MUTEX */
+		/* USER CODE BEGIN 3 */
+		tcp_server();
 
-  /* USER CODE BEGIN RTOS_SEMAPHORES */
-  /* add semaphores, ... */
-  /* USER CODE END RTOS_SEMAPHORES */
-
-  /* USER CODE BEGIN RTOS_TIMERS */
-  /* start timers, add new ones, ... */
-  /* USER CODE END RTOS_TIMERS */
-
-  /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
-  /* USER CODE END RTOS_QUEUES */
-
-  /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
-
-  /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
-  /* USER CODE END RTOS_THREADS */
-
-  /* USER CODE BEGIN RTOS_EVENTS */
-  /* add events, ... */
-  /* USER CODE END RTOS_EVENTS */
-
-  /* Start scheduler */
-  osKernelStart();
-
-  /* We should never get here as control is now taken by the scheduler */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
-      /* Check the link state and act accordingly */
-      ethernet_link_check_state(&gnetif);
-
-      /* Handle any incoming packets */
-      ethernetif_input(&gnetif);
-
-      /* Simple delay */
-      HAL_Delay(100);
-  }
-  /* USER CODE END 3 */
+		/* Simple delay */
+		HAL_Delay(100);
+	}
+	/* USER CODE END 3 */
 }
 
 /**
@@ -353,27 +302,6 @@ void tcp_server(void) {
 
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_StartDefaultTask */
-/**
-  * @brief  Function implementing the defaultTask thread.
-  * @param  argument: Not used
-  * @retval None
-  */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument) {
-	/* init code for LWIP */
-	MX_LWIP_Init();
-	/* USER CODE BEGIN 5 */
-
-	tcp_server();
-
-	/* Infinite loop */
-	for (;;) {
-		osDelay(1);
-	}
-	/* USER CODE END 5 */
-}
-
  /* MPU Configuration */
 
 void MPU_Config(void)
@@ -412,27 +340,6 @@ void MPU_Config(void)
   /* Enables the MPU */
   HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 
-}
-
-/**
-  * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM6 interrupt took place, inside
-  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
-  * a global variable "uwTick" used as application time base.
-  * @param  htim : TIM handle
-  * @retval None
-  */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-  /* USER CODE BEGIN Callback 0 */
-
-  /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM6) {
-    HAL_IncTick();
-  }
-  /* USER CODE BEGIN Callback 1 */
-
-  /* USER CODE END Callback 1 */
 }
 
 /**
