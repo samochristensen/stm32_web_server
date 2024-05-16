@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 #include "lwip.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -48,6 +49,13 @@
 
 /* Private variables ---------------------------------------------------------*/
 
+/* Definitions for defaultTask */
+osThreadId_t defaultTaskHandle;
+const osThreadAttr_t defaultTask_attributes = {
+  .name = "defaultTask",
+  .stack_size = 1024 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -56,12 +64,16 @@
 void SystemClock_Config(void);
 static void MPU_Config(void);
 static void MX_GPIO_Init(void);
+void StartDefaultTask(void *argument);
+
 /* USER CODE BEGIN PFP */
-static void tcp_echo_init(void);
-static err_t echo_accept(void *arg, struct tcp_pcb *newpcb, err_t err);
-static err_t echo_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
-static void echo_error(void *arg, err_t err);
-static err_t echo_poll(void *arg, struct tcp_pcb *tpcb);
+//static void tcp_echo_init(void);
+//static err_t echo_accept(void *arg, struct tcp_pcb *newpcb, err_t err);
+//static err_t echo_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
+//static void echo_error(void *arg, err_t err);
+//static err_t echo_poll(void *arg, struct tcp_pcb *tpcb);
+void tcp_server(void);
+
 void Error_Handler(void);
 
 /* USER CODE END PFP */
@@ -142,13 +154,45 @@ HSEM notification */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_LWIP_Init();
   /* USER CODE BEGIN 2 */
 
-  /* Initialize TCP echo server */
-  tcp_echo_init();
-
   /* USER CODE END 2 */
+
+  /* Init scheduler */
+  osKernelInitialize();
+
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* creation of defaultTask */
+  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  /* USER CODE END RTOS_THREADS */
+
+  /* USER CODE BEGIN RTOS_EVENTS */
+  /* add events, ... */
+  /* USER CODE END RTOS_EVENTS */
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -252,7 +296,83 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+void tcp_server(void) {
+    int sock, new_sock;
+    struct sockaddr_in server_addr, client_addr;
+    socklen_t client_addr_len;
+    char buffer[1024];
+    int recv_len;
+
+    // Create a new socket
+    sock = lwip_socket(AF_INET, SOCK_RAW, 0);
+    if (sock < 0) {
+        // Handle error
+        return;
+    }
+
+    // Bind the socket to an IP address and port
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(12345);  // Specify the port number
+    server_addr.sin_addr.s_addr = INADDR_ANY;  // Bind to any available network interface
+
+    if (lwip_bind(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        // Handle error
+        lwip_close(sock);
+        return;
+    }
+
+    // Listen for incoming connections
+    if (lwip_listen(sock, 5) < 0) {
+        // Handle error
+        lwip_close(sock);
+        return;
+    }
+
+    // Accept incoming connections
+    while (1) {
+        client_addr_len = sizeof(client_addr);
+        new_sock = lwip_accept(sock, (struct sockaddr *)&client_addr, &client_addr_len);
+        if (new_sock < 0) {
+            // Handle error
+            continue;
+        }
+
+        // Receive data from the client
+        recv_len = lwip_recv(new_sock, buffer, sizeof(buffer), 0);
+        if (recv_len > 0) {
+            // Process received data
+        }
+
+        // Close the connection
+        lwip_close(new_sock);
+    }
+
+    // Close the server socket
+    lwip_close(sock);
+}
+
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN Header_StartDefaultTask */
+/**
+  * @brief  Function implementing the defaultTask thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartDefaultTask */
+void StartDefaultTask(void *argument) {
+	/* init code for LWIP */
+	MX_LWIP_Init();
+	/* USER CODE BEGIN 5 */
+
+	tcp_server();
+
+	/* Infinite loop */
+	for (;;) {
+		osDelay(1);
+	}
+	/* USER CODE END 5 */
+}
 
  /* MPU Configuration */
 
@@ -295,80 +415,26 @@ void MPU_Config(void)
 }
 
 /**
- * Initialize TCP echo server.
- */
-static void tcp_echo_init(void)
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM6 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    struct tcp_pcb *pcb;
-    pcb = tcp_new();
-    if (pcb != NULL)
-    {
-        err_t err;
+  /* USER CODE BEGIN Callback 0 */
 
-        err = tcp_bind(pcb, IP_ADDR_ANY, ECHO_PORT);
-        if (err == ERR_OK)
-        {
-            pcb = tcp_listen(pcb);
-            tcp_accept(pcb, echo_accept);
-        }
-        else
-        {
-            // Error, unable to bind port
-            tcp_close(pcb);
-        }
-    }
-    else
-    {
-        // Error, unable to create new pcb
-    }
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM6) {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
 }
 
-/**
- * Handle incoming connections.
- */
-static err_t echo_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
-{
-    tcp_recv(newpcb, echo_recv);
-    tcp_err(newpcb, echo_error);
-    tcp_poll(newpcb, echo_poll, 4);
-    return ERR_OK;
-}
-
-/**
- * Receive callback function.
- */
-static err_t echo_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
-{
-    if (p == NULL)
-    {
-        tcp_close(tpcb);
-        tcp_recv(tpcb, NULL);
-        return ERR_OK;
-    }
-    else
-    {
-        tcp_recved(tpcb, p->tot_len);  // Indicate that the data has been received
-        tcp_write(tpcb, p->payload, p->tot_len, TCP_WRITE_FLAG_COPY);
-        pbuf_free(p);  // Free the buffer
-    }
-    return ERR_OK;
-}
-
-/**
- * Error callback function.
- */
-static void echo_error(void *arg, err_t err)
-{
-    // Handle the error
-}
-
-/**
- * Poll callback, can be used to keep the connection alive.
- */
-static err_t echo_poll(void *arg, struct tcp_pcb *tpcb)
-{
-    return ERR_OK;
-}
 /**
   * @brief  This function is executed in case of error occurrence.
   * @retval None

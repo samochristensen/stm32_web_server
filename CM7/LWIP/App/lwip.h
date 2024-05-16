@@ -45,6 +45,8 @@
 #include "lwip/err.h"
 #include "lwip/pbuf.h"
 #include "lwip/ip_addr.h"
+#include "lwip/sockets.h"
+#include "lwip/inet.h"
 
 /* USER CODE END 0 */
 
