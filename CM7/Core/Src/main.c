@@ -201,14 +201,6 @@ HSEM notification */
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-      /* Check the link state and act accordingly */
-      ethernet_link_check_state(&gnetif);
-
-      /* Handle any incoming packets */
-      ethernetif_input(&gnetif);
-
-      /* Simple delay */
-      HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
@@ -304,7 +296,7 @@ void tcp_server(void) {
     int recv_len;
 
     // Create a new socket
-    sock = lwip_socket(AF_INET, SOCK_RAW, 0);
+    sock = lwip_socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
         // Handle error
         return;
@@ -366,10 +358,11 @@ void StartDefaultTask(void *argument)
   MX_LWIP_Init();
   /* USER CODE BEGIN 5 */
 
-	tcp_server();
-
 	/* Infinite loop */
 	for (;;) {
+
+		tcp_server();
+
 		osDelay(1);
 	}
   /* USER CODE END 5 */
