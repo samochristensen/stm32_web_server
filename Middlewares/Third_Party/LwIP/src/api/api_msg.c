@@ -734,7 +734,7 @@ netconn_alloc(enum netconn_type t, netconn_callback callback)
 #endif /* LWIP_UDP */
 #if LWIP_TCP
     case NETCONN_TCP:
-      size = DEFAULT_TCP_RECVMBOX_SIZE;
+      size = 100; //DEFAULT_TCP_RECVMBOX_SIZE;
       break;
 #endif /* LWIP_TCP */
     default:
