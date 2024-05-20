@@ -131,13 +131,24 @@ void ev_handler(struct mg_connection *c, int ev, void *ev_data) {
 		break;
     case MG_EV_OPEN:
         // Log or handle the creation of a new socket
-        printf("#####################################Socket opened.\n");
+        printf("##################################### Socket opened.\n");
         break;
 	default:
 		printf("##################################### Unhandled event %d\n", ev);
 	}
 }
 
+static void run_mongoose(void){
+	struct mg_mgr mgr;
+	mg_mgr_init(&mgr);
+	mg_log_set(MG_LL_DEBUG);
+
+	mg_http_listen(&mgr, "http://0.0.0.0:8000", ev_handler, NULL);
+
+	for(;;){
+		mg_mgr_poll(&mgr, 0);
+	}
+}
 
 /* USER CODE END 0 */
 
@@ -201,22 +212,15 @@ int main(void)
   MX_ETH_Init();
   MX_RNG_Init();
   /* USER CODE BEGIN 2 */
-  struct mg_mgr mgr;
-  mg_mgr_init(&mgr);
-  mg_log_set(MG_LL_VERBOSE);
 
-//  struct mg_tcpip_if mif = {
-//      .mac = {00, 80, 10, 00, 00, 00},
-//      .driver = &mg_tcpip_driver_stm32h,
-//  };
-//  mg_tcpip_init(&mgr, &mif);
+  NVIC_EnableIRQ(ETH_IRQn);
 
-  struct mg_connection *conn = mg_http_listen(&mgr, "http://192.168.1.2:80", ev_handler, NULL);
-  if (conn == NULL) {
-      printf("connection failed! \r\n");
+  run_mongoose();
+
+  while(1) {
+	  printf("Tick: %lu\r\n", HAL_GetTick());
+	  HAL_Delay(500);
   }
-
-  for (;;) mg_mgr_poll(&mgr, 1000);
 
   /* USER CODE END 2 */
 
