@@ -98,7 +98,7 @@ uint64_t mg_millis(void) {
 }
 
 void ev_handler(struct mg_connection *c, int ev, void *ev_data) {
-	switch (ev) {
+ 	switch (ev) {
 	case MG_EV_HTTP_MSG: {
         struct mg_http_message *hm = (struct mg_http_message *) ev_data;
         printf("Received HTTP request: %.*s\n", (int) hm->uri.len, hm->uri.buf);
@@ -106,31 +106,35 @@ void ev_handler(struct mg_connection *c, int ev, void *ev_data) {
 		break;
 	}
 	case MG_EV_ACCEPT: {
-		printf("New connection accepted.\n");
+		printf("##################################### New connection accepted.\n");
 		break;
 	}
 	case MG_EV_CONNECT: {
 		int status = *(int*) ev_data;
 		if (status == 0) {
-			printf("Successfully connected.\n");
+			printf("##################################### Successfully connected.\n");
 		} else {
-			printf("Failed to connect, error %d\n", status);
+			printf("##################################### Failed to connect, error %d\n", status);
 		}
 		break;
 	}
 	case MG_EV_CLOSE: {
 		if (c->is_listening) {
-			printf("Listening socket closed.\n");
+			printf("##################################### Listening socket closed.\n");
 		} else {
-			printf("Connection closed.\n");
+			printf("##################################### Connection closed.\n");
 		}
 		break;
 	}
 	case MG_EV_POLL:
 		// Handle periodic tasks
 		break;
+    case MG_EV_OPEN:
+        // Log or handle the creation of a new socket
+        printf("#####################################Socket opened.\n");
+        break;
 	default:
-		printf("Unhandled event %d\n", ev);
+		printf("##################################### Unhandled event %d\n", ev);
 	}
 }
 
@@ -207,7 +211,7 @@ int main(void)
 //  };
 //  mg_tcpip_init(&mgr, &mif);
 
-  struct mg_connection *conn = mg_http_listen(&mgr, "http://0.0.0.0:80", ev_handler, NULL);
+  struct mg_connection *conn = mg_http_listen(&mgr, "http://192.168.1.2:80", ev_handler, NULL);
   if (conn == NULL) {
       printf("connection failed! \r\n");
   }
