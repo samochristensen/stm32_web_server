@@ -19,11 +19,11 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "string.h"
-#include "mongoose.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "mongoose.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -71,6 +71,8 @@ RNG_HandleTypeDef hrng;
 
 UART_HandleTypeDef huart3;
 
+osThreadId defaultTaskHandle;
+osThreadId BlinkerHandle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -81,6 +83,9 @@ static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_ETH_Init(void);
 static void MX_RNG_Init(void);
+void StartDefaultTask(void const * argument);
+void StartTask02(void const * argument);
+
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -91,6 +96,44 @@ static void MX_RNG_Init(void);
 uint64_t mg_millis(void) {
 	return HAL_GetTick();
 }
+
+void ev_handler(struct mg_connection *c, int ev, void *ev_data) {
+	switch (ev) {
+	case MG_EV_HTTP_MSG: {
+        struct mg_http_message *hm = (struct mg_http_message *) ev_data;
+        printf("Received HTTP request: %.*s\n", (int) hm->uri.len, hm->uri.buf);
+        mg_http_reply(c, 200, "", "hello, current time: %llu\r\n", mg_millis());
+		break;
+	}
+	case MG_EV_ACCEPT: {
+		printf("New connection accepted.\n");
+		break;
+	}
+	case MG_EV_CONNECT: {
+		int status = *(int*) ev_data;
+		if (status == 0) {
+			printf("Successfully connected.\n");
+		} else {
+			printf("Failed to connect, error %d\n", status);
+		}
+		break;
+	}
+	case MG_EV_CLOSE: {
+		if (c->is_listening) {
+			printf("Listening socket closed.\n");
+		} else {
+			printf("Connection closed.\n");
+		}
+		break;
+	}
+	case MG_EV_POLL:
+		// Handle periodic tasks
+		break;
+	default:
+		printf("Unhandled event %d\n", ev);
+	}
+}
+
 
 /* USER CODE END 0 */
 
@@ -156,16 +199,56 @@ int main(void)
   /* USER CODE BEGIN 2 */
   struct mg_mgr mgr;
   mg_mgr_init(&mgr);
+  mg_log_set(MG_LL_VERBOSE);
 
-  struct mg_tcpip_if mif = {
-      .mac = {00, 80, 10, 00, 00, 00},
-      .driver = &mg_tcpip_driver_stm32h,
-  };
-  mg_tcpip_init(&mgr, &mif);
+//  struct mg_tcpip_if mif = {
+//      .mac = {00, 80, 10, 00, 00, 00},
+//      .driver = &mg_tcpip_driver_stm32h,
+//  };
+//  mg_tcpip_init(&mgr, &mif);
 
-  for (;;) mg_mgr_poll(&mgr, 100);
+  struct mg_connection *conn = mg_http_listen(&mgr, "http://0.0.0.0:80", ev_handler, NULL);
+  if (conn == NULL) {
+      printf("connection failed! \r\n");
+  }
+
+  for (;;) mg_mgr_poll(&mgr, 1000);
 
   /* USER CODE END 2 */
+
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* definition and creation of defaultTask */
+  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 256);
+  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+
+  /* definition and creation of Blinker */
+  osThreadDef(Blinker, StartTask02, osPriorityLow, 0, 128);
+  BlinkerHandle = osThreadCreate(osThread(Blinker), NULL);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  /* USER CODE END RTOS_THREADS */
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -276,7 +359,7 @@ static void MX_ETH_Init(void)
   heth.Init.MediaInterface = HAL_ETH_MII_MODE;
   heth.Init.TxDesc = DMATxDscrTab;
   heth.Init.RxDesc = DMARxDscrTab;
-  heth.Init.RxBuffLen = 0;
+  heth.Init.RxBuffLen = 1536;
 
   /* USER CODE BEGIN MACADDRESS */
 
@@ -411,6 +494,42 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE END 4 */
 
+/* USER CODE BEGIN Header_StartDefaultTask */
+/**
+  * @brief  Function implementing the defaultTask thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartDefaultTask */
+void StartDefaultTask(void const * argument)
+{
+  /* USER CODE BEGIN 5 */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_StartTask02 */
+/**
+* @brief Function implementing the Blinker thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTask02 */
+void StartTask02(void const * argument)
+{
+  /* USER CODE BEGIN StartTask02 */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartTask02 */
+}
+
 /**
   * @brief  Period elapsed callback in non blocking mode
   * @note   This function is called  when TIM6 interrupt took place, inside
@@ -434,7 +553,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 /**
   * @brief  This function is executed in case of error occurrence.
- * @retval None
+  * @retval None
   */
 void Error_Handler(void)
 {
