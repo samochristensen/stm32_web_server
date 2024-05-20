@@ -158,7 +158,7 @@ int main(void)
   mg_mgr_init(&mgr);
 
   struct mg_tcpip_if mif = {
-      .mac = {00, 80, E1, 00, 00, 00},
+      .mac = {00, 80, 10, 00, 00, 00},
       .driver = &mg_tcpip_driver_stm32h,
   };
   mg_tcpip_init(&mgr, &mif);
