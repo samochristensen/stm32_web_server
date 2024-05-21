@@ -131,22 +131,25 @@ void ev_handler(struct mg_connection *c, int ev, void *ev_data) {
 		break;
     case MG_EV_OPEN:
         // Log or handle the creation of a new socket
-        printf("##################################### Socket opened.\n");
+        printf("##################################### Socket opened.\r\n");
         break;
 	default:
-		printf("##################################### Unhandled event %d\n", ev);
+		printf("##################################### Unhandled event %d\r\n", ev);
 	}
 }
 
 static void run_mongoose(void){
 	struct mg_mgr mgr;
 	mg_mgr_init(&mgr);
-	mg_log_set(MG_LL_DEBUG);
+	mg_log_set(MG_LL_VERBOSE);
 
-	mg_http_listen(&mgr, "http://0.0.0.0:8000", ev_handler, NULL);
+	struct mg_connection* conn = mg_listen(&mgr, "tcp://0.0.0.0:80", ev_handler, NULL);
+	if(conn == NULL){
+		printf("connection failed: null! \r\n");
+	}
 
 	for(;;){
-		mg_mgr_poll(&mgr, 0);
+		mg_mgr_poll(&mgr, 1000);
 	}
 }
 
@@ -367,7 +370,7 @@ static void MX_ETH_Init(void)
   heth.Init.MediaInterface = HAL_ETH_MII_MODE;
   heth.Init.TxDesc = DMATxDscrTab;
   heth.Init.RxDesc = DMARxDscrTab;
-  heth.Init.RxBuffLen = 1536;
+  heth.Init.RxBuffLen = 1524;
 
   /* USER CODE BEGIN MACADDRESS */
 
