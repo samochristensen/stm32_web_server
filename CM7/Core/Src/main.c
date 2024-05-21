@@ -23,6 +23,11 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+uint64_t mg_millis(void) {
+	return HAL_GetTick();
+}
+
+
 #include "mongoose.h"
 /* USER CODE END Includes */
 
@@ -93,63 +98,40 @@ void StartTask02(void const * argument);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-uint64_t mg_millis(void) {
-	return HAL_GetTick();
+// Connection event handler function
+static void fn(struct mg_connection *c, int ev, void *ev_data) {
+  if (ev == MG_EV_HTTP_MSG) {  // New HTTP request received
+    struct mg_http_message *hm = (struct mg_http_message *) ev_data;  // Parsed HTTP request
+    if (mg_match(hm->uri, mg_str("/api/hello"), NULL)) {              // REST API call?
+      mg_http_reply(c, 200, "", "{%m:%d}\n", MG_ESC("status"), 1);    // Yes. Respond JSON
+    } else {
+      struct mg_http_serve_opts opts = {.root_dir = "."};  // For all other URLs,
+      mg_http_serve_dir(c, hm, &opts);                     // Serve static files
+    }
+  }
 }
 
-void ev_handler(struct mg_connection *c, int ev, void *ev_data) {
- 	switch (ev) {
-	case MG_EV_HTTP_MSG: {
-        struct mg_http_message *hm = (struct mg_http_message *) ev_data;
-        printf("Received HTTP request: %.*s\n", (int) hm->uri.len, hm->uri.buf);
-        mg_http_reply(c, 200, "", "hello, current time: %llu\r\n", mg_millis());
-		break;
-	}
-	case MG_EV_ACCEPT: {
-		printf("##################################### New connection accepted.\n");
-		break;
-	}
-	case MG_EV_CONNECT: {
-		int status = *(int*) ev_data;
-		if (status == 0) {
-			printf("##################################### Successfully connected.\n");
-		} else {
-			printf("##################################### Failed to connect, error %d\n", status);
-		}
-		break;
-	}
-	case MG_EV_CLOSE: {
-		if (c->is_listening) {
-			printf("##################################### Listening socket closed.\n");
-		} else {
-			printf("##################################### Connection closed.\n");
-		}
-		break;
-	}
-	case MG_EV_POLL:
-		// Handle periodic tasks
-		break;
-    case MG_EV_OPEN:
-        // Log or handle the creation of a new socket
-        printf("##################################### Socket opened.\r\n");
-        break;
-	default:
-		printf("##################################### Unhandled event %d\r\n", ev);
-	}
-}
-
-static void run_mongoose(void){
-	struct mg_mgr mgr;
-	mg_mgr_init(&mgr);
+static void run_mongoose(void) {
+	struct mg_mgr mgr;  // Mongoose event manager. Holds all connections
+	mg_mgr_init(&mgr);  // Initialise event manager
 	mg_log_set(MG_LL_VERBOSE);
 
-	struct mg_connection* conn = mg_listen(&mgr, "tcp://0.0.0.0:80", ev_handler, NULL);
-	if(conn == NULL){
-		printf("connection failed: null! \r\n");
-	}
+	int8_t mac_addr[6] = { 2, 3, 4, 5, 6, 7 };
 
-	for(;;){
-		mg_mgr_poll(&mgr, 1000);
+	struct mg_tcpip_driver_stm32h_data driver_data = { .mdc_cr = 4 };
+	struct mg_tcpip_if mif;
+	memcpy(mif.mac, mac_addr, sizeof(mif.mac)); // Copy MAC address into the structure
+	mif.ip = mg_htonl(MG_U32(192, 168, 1, 2));
+	mif.mask = mg_htonl(MG_U32(255, 255, 255, 0));
+	mif.gw = mg_htonl(MG_U32(192, 168, 1, 1));
+	mif.driver = &mg_tcpip_driver_stm32h;
+	mif.driver_data = &driver_data;
+
+	mg_tcpip_init(&mgr, &mif);
+
+	mg_http_listen(&mgr, "http://0.0.0.0:80", fn, NULL);  // Setup listener
+	for (;;) {
+		mg_mgr_poll(&mgr, 1000);  // Infinite event loop
 	}
 }
 
